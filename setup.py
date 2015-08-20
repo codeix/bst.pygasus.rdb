@@ -2,27 +2,14 @@
 from setuptools import setup, find_packages
 import os
 
-version = '0.1'
+version = '0.1-dev'
 
-def read(*rnames):
-        return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
 long_description = (
-    read('README.rst')
-    + '
-' +
-    'Contributors
-'
-    '============
-'
-    + '
-' +
-    read('docs', 'CONTRIBUTORS.txt')
-    + '
-' +
-    read('docs', 'CHANGES.txt')
-    + '
-')
+    open('README.rst').read()
+    + '\n' +
+    open('CHANGES.rst').read()
+    + '\n')
 
 setup(
       name='bst.pygasus.rdb',
@@ -32,7 +19,7 @@ setup(
       keywords='',
       author='Thomas Oexl',
       author_email='thomas.oexl@biel-bienne.ch',
-      url='nourl',
+      url='https://github.com/bielbienne/bst.pygasus.rdb',
       license='ZPL',
       packages=find_packages('src'),
       package_dir = {'': 'src'},
@@ -41,20 +28,17 @@ setup(
       zip_safe=False,
       install_requires=[
           'setuptools',
+          'SQLAlchemy'
       ],
       entry_points="""
       """,
+      # Get more strings from
+      # http://pypi.python.org/pypi?%3Aaction=list_classifiers
       classifiers=[
-          "Development Status :: 5 - Production/Stable",
-          "Intended Audience :: Developers",
-          "Operating System :: OS Independent",
-          "Programming Language :: Python",
-          "Programming Language :: Python :: 3",
-          "Programming Language :: Python :: 3.2",
-          "Programming Language :: Python :: 3.3",
-          "Programming Language :: Python :: 3.4",
-          "Programming Language :: Python :: Implementation :: CPython",
-          "Programming Language :: Python :: Implementation :: PyPy",
-          "Topic :: Software Development :: Libraries :: Python Modules",
-      ],
+          'Programming Language :: Python :: 3',
+          'Natural Language :: English',
+          'License :: OSI Approved :: Zope Public License',
+          'Operating System :: OS Independent',
+          'Development Status :: 4 - Beta'
+      ]
       )
