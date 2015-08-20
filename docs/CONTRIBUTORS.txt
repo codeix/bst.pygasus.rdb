@@ -1,0 +1,6 @@
+
+Note:  place names and roles of the people who contribute to this package
+       in this file, one per line, e.g.:
+
+- Jon Doe, Original Author
+- Jane Doe, Contributed all lib modules
