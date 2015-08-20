@@ -24,7 +24,7 @@ setup(
       packages=find_packages('src'),
       package_dir = {'': 'src'},
       include_package_data = True,
-      namespace_packages=['bst.pygasus'],
+      namespace_packages=['bst', 'bst.pygasus'],
       zip_safe=False,
       install_requires=[
           'setuptools',
