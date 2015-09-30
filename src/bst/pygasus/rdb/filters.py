@@ -21,7 +21,7 @@ class AbstractFilterParser(object):
             return column > value
         def lt():
             return column < value
-        switch = {"like": like, "eq": eq, "gt": gt, "lt": lt}
+        switch = {'like': like, 'eq': eq, 'gt': gt, 'lt': lt}
               
         return switch[operator]()
     
