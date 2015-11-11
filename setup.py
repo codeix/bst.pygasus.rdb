@@ -28,7 +28,8 @@ setup(
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'SQLAlchemy'
+          'SQLAlchemy',
+          'zope.sqlalchemy'
       ],
       entry_points="""
       """,

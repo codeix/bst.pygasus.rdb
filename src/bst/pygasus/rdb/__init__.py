@@ -2,8 +2,13 @@
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from zope.sqlalchemy import register
 from contextlib import contextmanager
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, DatabaseError
+from bst.pygasus.core.exc import BstSystemError, BstTechnicalError
+import transaction
+from transaction._compat import get_thread_ident
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -32,7 +37,7 @@ def getSession():
         
         logger.info('Creating Session and bind engine with connect string: %s', __connectstring__)
         try:
-            engine = create_engine(__connectstring__, pool_size=20, max_overflow=100)
+            engine = create_engine(__connectstring__, pool_size=20, max_overflow=100, echo=logger.isEnabledFor(logging.DEBUG))
             Session = sessionmaker(bind=engine)
         except Exception as e:
             raise BstSystemError() from e
@@ -66,41 +71,39 @@ def dumpStatement(query):
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug('Dump SQL Statement:\n%s', str(query.statement.compile(dialect=getDialect())))
 
+
+def registerSessionEvents(session):
+    current = transaction.get();
+    if current.description is None:
+       raise BstSystemError('Mandatory module variable __dialect__ not set!')
+   
+    
+    logger.debug('Joining transaction with note %s', current.description)
+    register(session)
+
+
 @contextmanager
 def session_scope():
     """Provide a transactional scope around a series of operations."""
-    session = getSession()
+    logger.debug('Context manager session_scope called.')
+
+    
     try:
+        session = getSession()
+        session.begin(subtransactions=True)
+        registerSessionEvents(session)
         yield session
+        logger.debug('End of session_scope reached. Committing session now.')
         session.commit()
     except Exception as e: 
+        logger.error('Exception occurred in SQLAlchemy session! Rollback session!')
         session.rollback()
         
         try:
-            raise e            
+            raise e
+        except DatabaseError as e:
+            raise BstTechnicalError("DatabaseError: " + e.__str__()) from e           
         except SQLAlchemyError as e:
             raise BstTechnicalError("SQLAlchemyError") from e
         except Exception as e:
-            raise BstSystemError() from e        
-    finally:
-        session.close()
-        
-# TODO move this to somewhere else
-        
-class BstError(Exception):
-    """Generic error class."""
-    
-class BstSystemError(BstError):
-    """AttributeError ..."""    
-    
-class BstTechnicalError(BstError):
-    """Base for all technical ie non business errors"""
-    
-class BstValidationError(BstTechnicalError):
-    """Whenever user input is not valid""" 
-    
-class BstAuthorizationError(BstTechnicalError):
-    """Whenever a user is not allowed""" 
-      
-    
-    
+            raise BstSystemError() from e

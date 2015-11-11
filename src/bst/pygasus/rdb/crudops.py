@@ -6,8 +6,11 @@ Created on 27.08.2015
 
 import logging
 from bst.pygasus.rdb import session_scope
+from bst.pygasus.rdb import getSession
 from bst.pygasus.rdb import dumpStatement
 from sqlalchemy import func
+from sqlalchemy import inspect
+from bst.pygasus.core.exc import BstTechnicalError
 
 logger = logging.getLogger(__name__)
 
@@ -33,19 +36,45 @@ class QueryHelper(object):
         return orderByList
     
 
-def getAllPaged(entity, start, limit, sorters, filters, parser):
+def getAllPaged(entityClass, start, limit, sorters, filters, parser):
     logger.debug('getAllPaged called')
     
     helper = QueryHelper()
-             
+       
     with session_scope() as session:
-        result = (session.query(entity)
-                  .filter(parser.parseFilter(entity, filters))
-                  .order_by(*helper.getOrderBy(entity, sorters, entity.id.asc()))
+#         import pdb;pdb.set_trace()
+        result = (session.query(entityClass)
+                  .filter(parser.parseFilter(entityClass, filters))
+                  .order_by(*helper.getOrderBy(entityClass, sorters, entityClass.id.asc()))
                   .limit(limit)
                   .offset(start))
-                   
-        dumpStatement(result);     
-        totalCount = session.query(func.count(entity.id)).scalar()
+                      
+        totalCount = session.query(func.count(entityClass.id)).scalar()
   
         return result, totalCount
+    
+def getById(entity):
+    with session_scope() as session:
+        session.query(entity.__mapper__).get(entity.id)
+        
+def reloadEntity(session, entity):
+    session.expire(entity)
+    return session.query(entity.__mapper__).get(entity.id)
+    
+def create(entity):
+    logger.debug('create called')
+    
+    if entity.id == 0:
+        del(entity.id)
+    
+    if entity.id is not None:
+        raise BstTechnicalError('Entity of type {0} contains not empty id field with value {1}'.format(entity.__mapper__, entity.id))    
+    
+    with session_scope() as session:
+
+
+        session.add(entity)
+        session.flush()
+        #To get the data inserted by INSERT Triggers, we need a reload 
+        return reloadEntity(session, entity)
+        
