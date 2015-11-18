@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from zope.sqlalchemy import register
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
-from bst.pygasus.core.exc import BstSystemError, BstTechnicalError
+from bst.pygasus.core.exc import BstSystemError, BstTechnicalError, BstError
 import transaction
 from transaction._compat import get_thread_ident
 
@@ -74,11 +74,10 @@ def dumpStatement(query):
 
 def registerSessionEvents(session):
     current = transaction.get();
-    if current.description is None:
-       raise BstSystemError('Mandatory module variable __dialect__ not set!')
+    if not current.description:
+       raise BstSystemError('Current transaction has no description!')
    
-    
-    logger.debug('Joining transaction with note %s', current.description)
+    logger.debug('Joining transaction [%s, txn.%d]', str(current.description), get_thread_ident())
     register(session)
 
 
@@ -105,5 +104,7 @@ def session_scope():
             raise BstTechnicalError("DatabaseError: " + e.__str__()) from e           
         except SQLAlchemyError as e:
             raise BstTechnicalError("SQLAlchemyError") from e
+        except BstError as e:
+            raise e
         except Exception as e:
             raise BstSystemError() from e

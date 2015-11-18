@@ -10,7 +10,7 @@ from bst.pygasus.rdb import getSession
 from bst.pygasus.rdb import dumpStatement
 from sqlalchemy import func
 from sqlalchemy import inspect
-from bst.pygasus.core.exc import BstTechnicalError
+from bst.pygasus.core.exc import BstTechnicalError, BstNoSuchEntityError
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,6 @@ def getAllPaged(entityClass, start, limit, sorters, filters, parser):
     helper = QueryHelper()
        
     with session_scope() as session:
-#         import pdb;pdb.set_trace()
         result = (session.query(entityClass)
                   .filter(parser.parseFilter(entityClass, filters))
                   .order_by(*helper.getOrderBy(entityClass, sorters, entityClass.id.asc()))
@@ -53,14 +52,12 @@ def getAllPaged(entityClass, start, limit, sorters, filters, parser):
   
         return result, totalCount
     
-def getById(entity):
-    with session_scope() as session:
-        session.query(entity.__mapper__).get(entity.id)
-        
-def reloadEntity(session, entity):
-    session.expire(entity)
-    return session.query(entity.__mapper__).get(entity.id)
-    
+def getById(session, entity):
+    result = session.query(entity.__mapper__).get(entity.id)
+    if result is None:
+        raise BstNoSuchEntityError('No entity of type [{0}] with id [{1}] found.'.format(entity.__mapper__, entity.id))
+    return result
+     
 def create(entity):
     logger.debug('create called')
     
@@ -68,13 +65,24 @@ def create(entity):
         del(entity.id)
     
     if entity.id is not None:
-        raise BstTechnicalError('Entity of type {0} contains not empty id field with value {1}'.format(entity.__mapper__, entity.id))    
+        raise BstTechnicalError('Entity of type [{0}] contains not empty id field with value [{1}]'.format(entity.__mapper__, entity.id))    
     
     with session_scope() as session:
 
-
+        logger.debug('add entity')
         session.add(entity)
+        logger.debug('flush session')
         session.flush()
-        #To get the data inserted by INSERT Triggers, we need a reload 
-        return reloadEntity(session, entity)
+        #To get the data inserted by INSERT Triggers, we need a refresh 
+        logger.debug('refresh entity')
+        session.refresh(entity)
+        return entity
+    
+def delete(entity):
+    logger.debug('delete called')
+    with session_scope() as session:
+        session.delete(getById(session, entity))
+        return entity
+        
+
         
